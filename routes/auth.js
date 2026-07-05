@@ -102,6 +102,7 @@ router.post(
             //     getStoredPhotoValue(req.files.aadharPhoto[0]) :
             //     "";
             // Cloudinary direct file.path me link deta hai, isliye functions ki zaroorat nahi hai
+            //  Cloudinary ka direct path database me save karein
             const uploadedPhoto = req.files && req.files.photo && req.files.photo[0] ?
                 req.files.photo[0].path : "";
 
