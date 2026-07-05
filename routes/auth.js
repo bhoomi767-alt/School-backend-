@@ -36,9 +36,9 @@ router.post(
     ]),
     async(req, res) => {
         try {
-            // console.log("BODY:", req.body);
-            const totalFees = Number(req.body.totalFees || 0);
-            const paidFees = Number(req.body.paidFees || 0);
+            const body = req.body || {};
+            const totalFees = Number(body.totalFees || 0);
+            const paidFees = Number(body.paidFees || 0);
             const {
                 name,
                 number,
@@ -51,15 +51,16 @@ router.post(
                 attendance,
                 fatherName,
                 dob
-            } = req.body;
-            const normalizedNumber = String(number).replace(/\D/g, "").slice(0, 10);
+            } = body;
+            const normalizedNumber = String(number || "").replace(/\D/g, "").slice(0, 10);
+            const passwordValue = typeof password === "string" ? password.trim() : "";
+            const safeName = typeof name === "string" ? name.trim() : "";
 
-            if (!normalizedNumber || !password || !name) {
+            if (!normalizedNumber || !passwordValue || !safeName) {
                 return res.status(400).json({
                     message: "Name, Mobile number, and Password are required."
                 });
             }
-
 
             if (!/^\d{10}$/.test(normalizedNumber)) {
                 return res.status(400).json({
@@ -67,21 +68,11 @@ router.post(
                 });
             }
 
-
-            const isValidPassword =
-                password.length >= 8 &&
-                password[0] === password[0].toUpperCase() &&
-                /[0-9]/.test(password) &&
-                /[@$!%*?&]/.test(password);
-
-            // console.log("PASSWORD VALID:", isValidPassword);
-
-            if (!isValidPassword) {
+            if (passwordValue.length < 6) {
                 return res.status(400).json({
-                    message: "Password must start with capital letter, contain number, special character and be at least 8 characters long"
+                    message: "Password must be at least 6 characters long"
                 });
             }
-
 
             const existingUser = await User.findOne({ number: Number(normalizedNumber) });
             if (existingUser) {
@@ -90,7 +81,7 @@ router.post(
                 });
             }
 
-            const hashedPassword = await bcrypt.hash(password, 10);
+            const hashedPassword = await bcrypt.hash(passwordValue, 10);
             const uploadedPhoto = req.files && req.files.photo && req.files.photo[0] ?
                 getStoredPhotoValue(req.files.photo[0]) : "";
 
@@ -98,29 +89,35 @@ router.post(
                 getStoredPhotoValue(req.files.aadharPhoto[0]) :
                 "";
 
+            const safeRollNo = role === "student" ? (rollNo || `ST${normalizedNumber}`) : "N/A";
+            const safeStudentClass = role === "student" ? (studentClass || "Not Assigned") : "Not Assigned";
+            const safeTotalFees = Number.isFinite(totalFees) ? totalFees : 0;
+            const safePaidFees = Number.isFinite(paidFees) ? paidFees : 0;
+            const safeFeeStatus = role === "student" ?
+                (feeStatus || (safePaidFees >= safeTotalFees && safeTotalFees > 0 ? "Paid" : "Pending")) : "Pending";
+
             const newUser = new User({
-                name,
+                name: safeName,
                 number: Number(normalizedNumber),
                 password: hashedPassword,
                 role: role || "student",
 
-                rollNo: role === "student" ? rollNo : undefined,
-                studentClass: role === "student" ? studentClass : undefined,
+                rollNo: safeRollNo,
+                studentClass: safeStudentClass,
 
-                totalFees: role === "student" ? totalFees : 0,
-                paidFees: role === "student" ? paidFees : 0,
+                totalFees: role === "student" ? safeTotalFees : 0,
+                paidFees: role === "student" ? safePaidFees : 0,
 
-                feeStatus: role === "student" ?
-                    (paidFees >= totalFees && totalFees > 0 ? "Paid" : "Pending") : undefined,
+                feeStatus: safeFeeStatus,
 
                 percentage: role === "student" ? Number(percentage || 0) : 0,
                 attendance: role === "student" ? Number(attendance || 0) : 0,
 
                 photo: role === "student" ? uploadedPhoto : "",
 
-                fatherName: role === "student" ? fatherName : "",
+                fatherName: role === "student" ? (fatherName || "") : "",
 
-                dob: role === "student" ? dob : "",
+                dob: role === "student" ? (dob || "") : "",
 
                 aadharPhoto: role === "student" ? uploadedAadhar : ""
             });
@@ -150,10 +147,10 @@ router.post(
             });
 
         } catch (error) {
-
-            // console.error("REGISTER ERROR:", error);
+            console.error("REGISTER ERROR:", error);
+            console.error(error && error.stack ? error.stack : error);
             return res.status(500).json({
-                message: "Internal Server Error during registration",
+                message: "Registration failed",
                 error: error.message
             });
         }
