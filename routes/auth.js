@@ -8,20 +8,33 @@ const upload = require("../multer");
 
 const router = express.Router();
 
+const normalizeStoredPath = (value) => {
+    if (!value || typeof value !== "string") return "";
+
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+
+    const normalized = trimmed.replace(/\\/g, "/");
+    const withUploadsPrefix = normalized.startsWith("uploads/") ? normalized : `uploads/${normalized}`;
+
+    return withUploadsPrefix.replace(/^\//, "");
+};
+
 const getStoredPhotoValue = (file) => {
     if (!file) return "";
 
     if (typeof file.filename === "string" && file.filename.trim()) {
-        return `uploads/${file.filename}`;
+        return normalizeStoredPath(file.filename);
     }
 
     if (typeof file.path === "string" && file.path.trim()) {
         const normalizedPath = file.path.replace(/\\/g, "/");
         const uploadsPrefix = "/uploads/";
-        if (normalizedPath.includes(uploadsPrefix)) {
-            return normalizedPath.split(uploadsPrefix).pop().startsWith("uploads/") ? normalizedPath.split(uploadsPrefix).pop() : normalizedPath.split(uploadsPrefix).pop();
-        }
-        return normalizedPath;
+        const lastSegment = normalizedPath.includes(uploadsPrefix) ?
+            normalizedPath.split(uploadsPrefix).pop() :
+            normalizedPath.split("/").pop();
+
+        return normalizeStoredPath(lastSegment);
     }
 
     return "";
