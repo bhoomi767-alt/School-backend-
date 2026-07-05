@@ -56,7 +56,9 @@ const allowedOrigins = [
     "http://127.0.0.1:1234",
     "http://127.0.0.1:5173",
     "https://school-ten-mauve.vercel.app",
-    "https://school-backend-production-59a3.up.railway.app"
+    "https://school-backend-production-59a3.up.railway.app",
+    "https://www.sunrisepublicschool.in", // <-- यह नया डोमेन ऐड किया
+    "https://sunrisepublicschool.in" // <-- बिना www वाला भी बैकअप के लिए ऐड किया
 ];
 
 const corsOptions = {
@@ -76,7 +78,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 
 app.use(express.json());
 app.use("/api/feedback", feedbackRoutes);
@@ -917,7 +919,7 @@ mongoose.connect(mongoUri)
 //     console.log("Server running 3000");
 // });
 // ✅ Ise replace karein code ke bilkul niche:
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || process.env.BACKEND_PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
