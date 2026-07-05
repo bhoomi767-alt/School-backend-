@@ -24,31 +24,54 @@ const phoneOTP = {};
 const app = express();
 
 app.get("/", (req, res) => {
-    res.send("<h1>School Backend Server is Running Successfully! ✅</h1>");
-})
-app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    const allowedOrigins = [
-        "http://localhost:1234",
-        "http://localhost:5173",
-        "http://127.0.0.1:1234",
-        "http://127.0.0.1:5173",
-        "https://school-ten-mauve.vercel.app"
-    ];
+        res.send("<h1>School Backend Server is Running Successfully! ✅</h1>");
+    })
+    // app.use((req, res, next) => {
+    //     const origin = req.headers.origin;
+    //     const allowedOrigins = [
+    //         "http://localhost:1234",
+    //         "http://localhost:5173",
+    //         "http://127.0.0.1:1234",
+    //         "http://127.0.0.1:5173",
+    //         "https://school-ten-mauve.vercel.app"
+    //     ];
 
-    if (origin && allowedOrigins.includes(origin)) {
-        res.setHeader("Access-Control-Allow-Origin", origin);
-        res.setHeader("Access-Control-Allow-Credentials", "true");
-    }
+//     if (origin && allowedOrigins.includes(origin)) {
+//         res.setHeader("Access-Control-Allow-Origin", origin);
+//         res.setHeader("Access-Control-Allow-Credentials", "true");
+//     }
 
-    if (req.method === "OPTIONS") {
-        res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-        res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
-        return res.sendStatus(204);
-    }
+//     if (req.method === "OPTIONS") {
+//         res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+//         res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+//         return res.sendStatus(204);
+//     }
 
-    next();
-});
+//     next();
+// });
+
+const allowedOrigins = [
+    "http://localhost:1234",
+    "http://localhost:5173",
+    "http://127.0.0.1:1234",
+    "http://127.0.0.1:5173",
+    "https://school-ten-mauve.vercel.app"
+];
+
+app.use(cors({
+    origin: function(origin, callback) {
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        } else {
+            return callback(new Error("Not allowed by CORS"));
+        }
+    },
+    credentials: true
+}));
+
+app.options("*", cors());
 
 app.use(express.json());
 app.use("/api/feedback", feedbackRoutes);
