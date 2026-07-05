@@ -23,18 +23,30 @@ const normalizeStoredPath = (value) => {
 const getStoredPhotoValue = (file) => {
     if (!file) return "";
 
-    if (typeof file.filename === "string" && file.filename.trim()) {
-        return normalizeStoredPath(file.filename);
-    }
-
     if (typeof file.path === "string" && file.path.trim()) {
-        const normalizedPath = file.path.replace(/\\/g, "/");
+        const normalizedPath = file.path.trim();
+
+        if (/^https?:\/\//i.test(normalizedPath)) {
+            return normalizedPath;
+        }
+
+        const normalized = normalizedPath.replace(/\\/g, "/");
         const uploadsPrefix = "/uploads/";
-        const lastSegment = normalizedPath.includes(uploadsPrefix) ?
-            normalizedPath.split(uploadsPrefix).pop() :
-            normalizedPath.split("/").pop();
+        const lastSegment = normalized.includes(uploadsPrefix) ?
+            normalized.split(uploadsPrefix).pop() :
+            normalized.split("/").pop();
 
         return normalizeStoredPath(lastSegment);
+    }
+
+    if (typeof file.filename === "string" && file.filename.trim()) {
+        const filename = file.filename.trim();
+
+        if (/^https?:\/\//i.test(filename)) {
+            return filename;
+        }
+
+        return normalizeStoredPath(filename);
     }
 
     return "";
@@ -104,10 +116,10 @@ router.post(
             // Cloudinary direct file.path me link deta hai, isliye functions ki zaroorat nahi hai
             //  Cloudinary ka direct path database me save karein
             const uploadedPhoto = req.files && req.files.photo && req.files.photo[0] ?
-                req.files.photo[0].path : "";
+                getStoredPhotoValue(req.files.photo[0]) : "";
 
             const uploadedAadhar = req.files && req.files.aadharPhoto && req.files.aadharPhoto[0] ?
-                req.files.aadharPhoto[0].path : "";
+                getStoredPhotoValue(req.files.aadharPhoto[0]) : "";
             const safeRollNo = role === "student" ? (rollNo || `ST${normalizedNumber}`) : "N/A";
             const safeStudentClass = role === "student" ? (studentClass || "Not Assigned") : "Not Assigned";
             const safeTotalFees = Number.isFinite(totalFees) ? totalFees : 0;
