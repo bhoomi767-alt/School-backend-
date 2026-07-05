@@ -57,15 +57,26 @@ const allowedOrigins = [
     "http://127.0.0.1:5173",
     "https://school-ten-mauve.vercel.app",
     "https://school-backend-production-59a3.up.railway.app",
-    "https://www.sunrisepublicschool.in", // <-- यह नया डोमेन ऐड किया
-    "https://sunrisepublicschool.in" // <-- बिना www वाला भी बैकअप के लिए ऐड किया
+    "https://www.sunrisepublicschool.in",
+    "https://sunrisepublicschool.in"
 ];
+
+const isLocalOrigin = (origin) => {
+    if (!origin) return true;
+
+    try {
+        const { hostname, protocol } = new URL(origin);
+        return ["localhost", "127.0.0.1", "::1"].includes(hostname) && ["http:", "https:"].includes(protocol);
+    } catch (error) {
+        return false;
+    }
+};
 
 const corsOptions = {
     origin: function(origin, callback) {
         if (!origin) return callback(null, true);
 
-        if (allowedOrigins.includes(origin)) {
+        if (allowedOrigins.includes(origin) || isLocalOrigin(origin)) {
             return callback(null, true);
         }
 
@@ -918,8 +929,7 @@ mongoose.connect(mongoUri)
 // app.listen(3000, () => {
 //     console.log("Server running 3000");
 // });
-// ✅ Ise replace karein code ke bilkul niche:
-const PORT = process.env.PORT || process.env.BACKEND_PORT || 3000;
+const PORT = process.env.BACKEND_PORT || process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
