@@ -25,8 +25,7 @@ const app = express();
 
 app.get("/", (req, res) => {
     res.send("<h1>School Backend Server is Running Successfully! ✅</h1>");
-});
-
+})
 app.use((req, res, next) => {
     const origin = req.headers.origin;
     const allowedOrigins = [
@@ -34,7 +33,7 @@ app.use((req, res, next) => {
         "http://localhost:5173",
         "http://127.0.0.1:1234",
         "http://127.0.0.1:5173",
-        "https://school-s6ur.vercel.app"
+        "https://school-ten-mauve.vercel.app"
     ];
 
     if (origin && allowedOrigins.includes(origin)) {
