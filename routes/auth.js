@@ -95,13 +95,18 @@ router.post(
             }
 
             const hashedPassword = await bcrypt.hash(passwordValue, 10);
+            // const uploadedPhoto = req.files && req.files.photo && req.files.photo[0] ?
+            //     getStoredPhotoValue(req.files.photo[0]) : "";
+
+            // const uploadedAadhar = req.files && req.files.aadharPhoto && req.files.aadharPhoto[0] ?
+            //     getStoredPhotoValue(req.files.aadharPhoto[0]) :
+            //     "";
+            // Cloudinary direct file.path me link deta hai, isliye functions ki zaroorat nahi hai
             const uploadedPhoto = req.files && req.files.photo && req.files.photo[0] ?
-                getStoredPhotoValue(req.files.photo[0]) : "";
+                req.files.photo[0].path : "";
 
             const uploadedAadhar = req.files && req.files.aadharPhoto && req.files.aadharPhoto[0] ?
-                getStoredPhotoValue(req.files.aadharPhoto[0]) :
-                "";
-
+                req.files.aadharPhoto[0].path : "";
             const safeRollNo = role === "student" ? (rollNo || `ST${normalizedNumber}`) : "N/A";
             const safeStudentClass = role === "student" ? (studentClass || "Not Assigned") : "Not Assigned";
             const safeTotalFees = Number.isFinite(totalFees) ? totalFees : 0;
