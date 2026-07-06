@@ -13,7 +13,7 @@ const { JWT } = require('google-auth-library');
 const feedbackRoutes = require("./routes/feedback");
 const Admission = require("./models/Admission");
 const adminRoutes = require("./routes/admin");
-import { Resend } from "resend";
+const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
 // const Enquiry = require("./models/Enquiry");
 
