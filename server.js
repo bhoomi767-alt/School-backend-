@@ -13,6 +13,8 @@ const { JWT } = require('google-auth-library');
 const feedbackRoutes = require("./routes/feedback");
 const Admission = require("./models/Admission");
 const adminRoutes = require("./routes/admin");
+import { Resend } from "resend";
+const resend = new Resend(process.env.RESEND_API_KEY);
 // const Enquiry = require("./models/Enquiry");
 
 
@@ -486,12 +488,7 @@ app.post("/api/admin/send-otp", async(req, res) => {
         //         rejectUnauthorized: false
         //     }
         // });
-        const dns = require("dns");
-        dns.setDefaultResultOrder("ipv4first");
 
-        process.env.NODE_OPTIONS = "--dns-result-order=ipv4first";
-
-        const nodemailer = require("nodemailer");
         const transporter = nodemailer.createTransport({
             host: "smtp.gmail.com",
             port: 587,
@@ -511,21 +508,37 @@ app.post("/api/admin/send-otp", async(req, res) => {
         });
         console.log("SMTP OK");
 
-        await transporter.sendMail({
-            from: process.env.EMAIL_USER,
+        //     await transporter.sendMail({
+        //         from: process.env.EMAIL_USER,
+        //         to: normalizedEmail,
+        //         subject: "Admin Password Reset OTP",
+        //         html: `
+        //     <h2>School Management System</h2>
+
+        //     <p>Your OTP is</p>
+
+        //     <h1>${otp}</h1>
+
+        //     <p>Valid for 5 minutes.</p>
+        //   `
+        //     });
+
+        const { data, error } = await resend.emails.send({
+            from: "School System <onboarding@resend.dev>",
             to: normalizedEmail,
             subject: "Admin Password Reset OTP",
             html: `
-        <h2>School Management System</h2>
-
-        <p>Your OTP is</p>
-
-        <h1>${otp}</h1>
-
-        <p>Valid for 5 minutes.</p>
-      `
+    <h2>School Management System</h2>
+    <p>Your OTP is</p>
+    <h1>${otp}</h1>
+    <p>Valid for 5 minutes.</p>
+  `,
         });
 
+        if (error) {
+            console.log(error);
+            return res.status(500).json({ message: "Email failed" });
+        }
         res.json({
             message: "OTP sent successfully"
         });
@@ -965,6 +978,22 @@ mongoose.connect(mongoUri)
         console.error("MongoDB connection failed:", err.message);
         process.exit(1);
     });
+
+// app.listen(3000, () => {
+//     console.log("Server running 3000");
+// });
+const PORT = process.env.BACKEND_PORT || process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
+
+// ✅ Vercel serverless ke liye export
+module.exports = app;
+le.log("DB connected"))
+.catch((err) => {
+    console.error("MongoDB connection failed:", err.message);
+    process.exit(1);
+});
 
 // app.listen(3000, () => {
 //     console.log("Server running 3000");
