@@ -5,7 +5,7 @@ const dotenv = require("dotenv");
 const path = require("path")
 const bcrypt = require('bcrypt');
 const Student = require("./models/user.js");
-const nodemailer = require("nodemailer");
+// const nodemailer = require("nodemailer");
 const otpStore = {}; // Temporary storage for OTP
 const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
 const { GoogleSpreadsheet } = require('google-spreadsheet');
@@ -486,7 +486,10 @@ app.post("/api/admin/send-otp", async(req, res) => {
         //         rejectUnauthorized: false
         //     }
         // });
+        const dns = require("dns");
+        dns.setDefaultResultOrder("ipv4first");
 
+        const nodemailer = require("nodemailer");
         const transporter = nodemailer.createTransport({
             host: "smtp.gmail.com",
             port: 587,
