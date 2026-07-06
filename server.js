@@ -986,22 +986,21 @@ const PORT = process.env.BACKEND_PORT || process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+// MongoDB connection
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => {
+        console.log("DB connected");
+    })
+    .catch((err) => {
+        console.error("MongoDB connection failed:", err.message);
+        process.exit(1);
+    });
 
-// ✅ Vercel serverless ke liye export
-module.exports = app;
-le.log("DB connected"))
-.catch((err) => {
-    console.error("MongoDB connection failed:", err.message);
-    process.exit(1);
-});
-
-// app.listen(3000, () => {
-//     console.log("Server running 3000");
-// });
 const PORT = process.env.BACKEND_PORT || process.env.PORT || 3000;
+
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
 
-// ✅ Vercel serverless ke liye export
+// ✅ Vercel serverless export (ONLY ONCE)
 module.exports = app;
