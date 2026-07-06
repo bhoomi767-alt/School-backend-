@@ -474,18 +474,31 @@ app.post("/api/admin/send-otp", async(req, res) => {
         };
         // console.log("EMAIL_USER =", process.env.EMAIL_USER);
         // console.log("EMAIL_PASS exists =", !!process.env.EMAIL_PASS);
+        // const transporter = nodemailer.createTransport({
+        //     host: "smtp.gmail.com",
+        //     port: 587,
+        //     secure: false,
+        //     auth: {
+        //         user: process.env.EMAIL_USER,
+        //         pass: process.env.EMAIL_PASS
+        //     },
+        //     tls: {
+        //         rejectUnauthorized: false
+        //     }
+        // });
+
         const transporter = nodemailer.createTransport({
             host: "smtp.gmail.com",
             port: 587,
             secure: false,
             auth: {
                 user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
+                pass: process.env.EMAIL_PASS,
             },
-            tls: {
-                rejectUnauthorized: false
-            }
         });
+
+        await transporter.verify();
+        console.log("SMTP OK");
 
         await transporter.sendMail({
             from: process.env.EMAIL_USER,
