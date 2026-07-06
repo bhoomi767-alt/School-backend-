@@ -489,6 +489,8 @@ app.post("/api/admin/send-otp", async(req, res) => {
         const dns = require("dns");
         dns.setDefaultResultOrder("ipv4first");
 
+        process.env.NODE_OPTIONS = "--dns-result-order=ipv4first";
+
         const nodemailer = require("nodemailer");
         const transporter = nodemailer.createTransport({
             host: "smtp.gmail.com",
@@ -502,8 +504,10 @@ app.post("/api/admin/send-otp", async(req, res) => {
             },
 
             family: 4,
-            connectionTimeout: 10000,
-            greetingTimeout: 10000,
+            pool: true, // 🔥 important in cloud containers
+            maxConnections: 1,
+            connectionTimeout: 20000,
+            greetingTimeout: 20000,
         });
         console.log("SMTP OK");
 
@@ -526,14 +530,12 @@ app.post("/api/admin/send-otp", async(req, res) => {
             message: "OTP sent successfully"
         });
 
-    } catch (err) {
+    } catch (error) {
         console.error("===== SEND OTP ERROR =====");
-        console.error(err);
-        console.error("Message:", err.message);
-        console.error("Stack:", err.stack);
-
-        res.status(500).json({
-            message: err.message
+        console.error(error);
+        return res.status(500).json({
+            message: "OTP failed",
+            error: error.message,
         });
     }
 });
