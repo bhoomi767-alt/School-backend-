@@ -13,8 +13,7 @@ const { JWT } = require('google-auth-library');
 const feedbackRoutes = require("./routes/feedback");
 const Admission = require("./models/Admission");
 const adminRoutes = require("./routes/admin");
-const { Resend } = require("resend");
-const resend = new Resend(process.env.RESEND_API_KEY);
+
 // const Enquiry = require("./models/Enquiry");
 
 
@@ -423,6 +422,8 @@ app.post("/api/admin/change-password", async(req, res) => {
 
 
 // 1. Send OTP Route
+const nodemailer = require("nodemailer");
+
 app.post("/api/admin/send-otp", async(req, res) => {
     // console.log("===== SEND OTP ROUTE HIT =====");
     // console.log(req.body);
@@ -476,69 +477,58 @@ app.post("/api/admin/send-otp", async(req, res) => {
         };
         // console.log("EMAIL_USER =", process.env.EMAIL_USER);
         // console.log("EMAIL_PASS exists =", !!process.env.EMAIL_PASS);
-        // const transporter = nodemailer.createTransport({
-        //     host: "smtp.gmail.com",
-        //     port: 587,
-        //     secure: false,
-        //     auth: {
-        //         user: process.env.EMAIL_USER,
-        //         pass: process.env.EMAIL_PASS
-        //     },
-        //     tls: {
-        //         rejectUnauthorized: false
-        //     }
-        // });
-
         const transporter = nodemailer.createTransport({
             host: "smtp.gmail.com",
             port: 587,
             secure: false,
-            requireTLS: true,
-
             auth: {
                 user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
+                pass: process.env.EMAIL_PASS
             },
-
-            family: 4,
-            pool: true, // 🔥 important in cloud containers
-            maxConnections: 1,
-            connectionTimeout: 20000,
-            greetingTimeout: 20000,
+            tls: {
+                rejectUnauthorized: false
+            }
         });
+        // const dns = require("dns");
+        // dns.setDefaultResultOrder("ipv4first");
+
+        // process.env.NODE_OPTIONS = "--dns-result-order=ipv4first";
+
+        // const nodemailer = require("nodemailer");
+        // const transporter = nodemailer.createTransport({
+        //     host: "smtp.gmail.com",
+        //     port: 587,
+        //     secure: false,
+        //     requireTLS: true,
+
+        //     auth: {
+        //         user: process.env.EMAIL_USER,
+        //         pass: process.env.EMAIL_PASS,
+        //     },
+
+        //     family: 4,
+        //     pool: true, // 🔥 important in cloud containers
+        //     maxConnections: 1,
+        //     connectionTimeout: 20000,
+        //     greetingTimeout: 20000,
+        // });
         console.log("SMTP OK");
 
-        //     await transporter.sendMail({
-        //         from: process.env.EMAIL_USER,
-        //         to: normalizedEmail,
-        //         subject: "Admin Password Reset OTP",
-        //         html: `
-        //     <h2>School Management System</h2>
-
-        //     <p>Your OTP is</p>
-
-        //     <h1>${otp}</h1>
-
-        //     <p>Valid for 5 minutes.</p>
-        //   `
-        //     });
-
-        const { data, error } = await resend.emails.send({
-            from: "School System <onboarding@resend.dev>",
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
             to: normalizedEmail,
             subject: "Admin Password Reset OTP",
             html: `
-    <h2>School Management System</h2>
-    <p>Your OTP is</p>
-    <h1>${otp}</h1>
-    <p>Valid for 5 minutes.</p>
-  `,
+        <h2>School Management System</h2>
+
+        <p>Your OTP is</p>
+
+        <h1>${otp}</h1>
+
+        <p>Valid for 5 minutes.</p>
+      `
         });
 
-        if (error) {
-            console.log(error);
-            return res.status(500).json({ message: "Email failed" });
-        }
         res.json({
             message: "OTP sent successfully"
         });
@@ -552,6 +542,7 @@ app.post("/api/admin/send-otp", async(req, res) => {
         });
     }
 });
+
 
 
 // 2. Verify OTP and Change Password
@@ -972,12 +963,12 @@ if (!mongoUri) {
     process.exit(1);
 }
 
-mongoose.connect(mongoUri)
-    .then(() => console.log("DB connected"))
-    .catch((err) => {
-        console.error("MongoDB connection failed:", err.message);
-        process.exit(1);
-    });
+// mongoose.connect(mongoUri)
+//     .then(() => console.log("DB connected"))
+//     .catch((err) => {
+//         console.error("MongoDB connection failed:", err.message);
+//         process.exit(1);
+//     });
 
 // app.listen(3000, () => {
 //     console.log("Server running 3000");
@@ -987,7 +978,7 @@ app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
 // MongoDB connection
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect(process.env.DB_CONNECT_STRING)
     .then(() => {
         console.log("DB connected");
     })
@@ -995,8 +986,6 @@ mongoose.connect(process.env.MONGO_URI)
         console.error("MongoDB connection failed:", err.message);
         process.exit(1);
     });
-
-const PORT = process.env.BACKEND_PORT || process.env.PORT || 3000;
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
