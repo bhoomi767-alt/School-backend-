@@ -419,8 +419,11 @@ app.post("/api/admin/change-password", async(req, res) => {
     }
 });
 
+
 // 1. Send OTP Route
 app.post("/api/admin/send-otp", async(req, res) => {
+    // console.log("===== SEND OTP ROUTE HIT =====");
+    // console.log(req.body);
     try {
 
         const { email } = req.body;
@@ -439,8 +442,19 @@ app.post("/api/admin/send-otp", async(req, res) => {
             admin = await Student.findOne({ role: "admin" });
 
             if (admin) {
+                // admin.email = normalizedEmail;
+                // await admin.save();
+                await Student.findByIdAndUpdate(
+                    admin._id, {
+                        $set: {
+                            email: normalizedEmail
+                        }
+                    }, {
+                        runValidators: false
+                    }
+                );
+
                 admin.email = normalizedEmail;
-                await admin.save();
             }
         }
 
@@ -458,7 +472,8 @@ app.post("/api/admin/send-otp", async(req, res) => {
             otp,
             expires: Date.now() + 5 * 60 * 1000
         };
-
+        // console.log("EMAIL_USER =", process.env.EMAIL_USER);
+        // console.log("EMAIL_PASS exists =", !!process.env.EMAIL_PASS);
         const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
@@ -487,15 +502,17 @@ app.post("/api/admin/send-otp", async(req, res) => {
         });
 
     } catch (err) {
-
-        console.log(err);
+        console.error("===== SEND OTP ERROR =====");
+        console.error(err);
+        console.error("Message:", err.message);
+        console.error("Stack:", err.stack);
 
         res.status(500).json({
-            message: "Failed to send OTP"
+            message: err.message
         });
-
     }
 });
+
 
 // 2. Verify OTP and Change Password
 app.post("/api/admin/verify-otp-reset", async(req, res) => {
