@@ -489,15 +489,16 @@ app.post("/api/admin/send-otp", async(req, res) => {
 
         const transporter = nodemailer.createTransport({
             host: "smtp.gmail.com",
-            port: 587,
-            secure: false,
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
+            port: 465,
+            secure: true, // SSL
 
-        await transporter.verify();
+            auth: {
+                user: process.env.EMAIL,
+                pass: process.env.PASSWORD,
+            },
+
+            family: 4,
+        });
         console.log("SMTP OK");
 
         await transporter.sendMail({
