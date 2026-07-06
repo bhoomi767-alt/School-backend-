@@ -7,6 +7,7 @@ const bcrypt = require('bcrypt');
 const Student = require("./models/user.js");
 const nodemailer = require("nodemailer");
 const otpStore = {}; // Temporary storage for OTP
+const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const feedbackRoutes = require("./routes/feedback");
@@ -24,31 +25,10 @@ const phoneOTP = {};
 const app = express();
 
 app.get("/", (req, res) => {
-        res.send("<h1>School Backend Server is Running Successfully! ✅</h1>");
-    })
-    // app.use((req, res, next) => {
-    //     const origin = req.headers.origin;
-    //     const allowedOrigins = [
-    //         "http://localhost:1234",
-    //         "http://localhost:5173",
-    //         "http://127.0.0.1:1234",
-    //         "http://127.0.0.1:5173",
-    //         "https://school-ten-mauve.vercel.app"
-    //     ];
+    res.send("<h1>School Backend Server is Running Successfully! ✅</h1>");
+})
 
-//     if (origin && allowedOrigins.includes(origin)) {
-//         res.setHeader("Access-Control-Allow-Origin", origin);
-//         res.setHeader("Access-Control-Allow-Credentials", "true");
-//     }
 
-//     if (req.method === "OPTIONS") {
-//         res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-//         res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
-//         return res.sendStatus(204);
-//     }
-
-//     next();
-// });
 
 const allowedOrigins = [
     "http://localhost:1234",
@@ -444,11 +424,25 @@ app.post("/api/admin/send-otp", async(req, res) => {
     try {
 
         const { email } = req.body;
+        const normalizedEmail = normalizeEmail(email);
 
-        const admin = await Student.findOne({
+        if (!normalizedEmail) {
+            return res.status(400).json({ message: "Email is required" });
+        }
+
+        let admin = await Student.findOne({
             role: "admin",
-            email
+            email: normalizedEmail
         });
+
+        if (!admin) {
+            admin = await Student.findOne({ role: "admin" });
+
+            if (admin) {
+                admin.email = normalizedEmail;
+                await admin.save();
+            }
+        }
 
         if (!admin) {
             return res.status(404).json({
@@ -460,7 +454,7 @@ app.post("/api/admin/send-otp", async(req, res) => {
             100000 + Math.random() * 900000
         ).toString();
 
-        otpStore[email] = {
+        otpStore[normalizedEmail] = {
             otp,
             expires: Date.now() + 5 * 60 * 1000
         };
@@ -475,7 +469,7 @@ app.post("/api/admin/send-otp", async(req, res) => {
 
         await transporter.sendMail({
             from: process.env.EMAIL_USER,
-            to: email,
+            to: normalizedEmail,
             subject: "Admin Password Reset OTP",
             html: `
         <h2>School Management System</h2>
@@ -513,8 +507,9 @@ app.post("/api/admin/verify-otp-reset", async(req, res) => {
             otp,
             newPassword
         } = req.body;
+        const normalizedEmail = normalizeEmail(email);
 
-        const data = otpStore[email];
+        const data = otpStore[normalizedEmail];
 
         if (!data) {
 
@@ -526,7 +521,7 @@ app.post("/api/admin/verify-otp-reset", async(req, res) => {
 
         if (Date.now() > data.expires) {
 
-            delete otpStore[email];
+            delete otpStore[normalizedEmail];
 
             return res.status(400).json({
                 message: "OTP Expired"
@@ -549,12 +544,12 @@ app.post("/api/admin/verify-otp-reset", async(req, res) => {
 
         await Student.findOneAndUpdate({
             role: "admin",
-            email
+            email: normalizedEmail
         }, {
             password: hash
         });
 
-        delete otpStore[email];
+        delete otpStore[normalizedEmail];
 
         res.json({
             message: "Password updated successfully"

@@ -8,45 +8,12 @@ const upload = require("../multer");
 
 const router = express.Router();
 
-const normalizeStoredPath = (value) => {
-    if (!value || typeof value !== "string") return "";
-
-    const trimmed = value.trim();
-    if (!trimmed) return "";
-
-    const normalized = trimmed.replace(/\\/g, "/");
-    const withUploadsPrefix = normalized.startsWith("uploads/") ? normalized : `uploads/${normalized}`;
-
-    return withUploadsPrefix.replace(/^\//, "");
-};
-
 const getStoredPhotoValue = (file) => {
     if (!file) return "";
 
+    // Cloudinary returns the full URL in file.path
     if (typeof file.path === "string" && file.path.trim()) {
-        const normalizedPath = file.path.trim();
-
-        if (/^https?:\/\//i.test(normalizedPath)) {
-            return normalizedPath;
-        }
-
-        const normalized = normalizedPath.replace(/\\/g, "/");
-        const uploadsPrefix = "/uploads/";
-        const lastSegment = normalized.includes(uploadsPrefix) ?
-            normalized.split(uploadsPrefix).pop() :
-            normalized.split("/").pop();
-
-        return normalizeStoredPath(lastSegment);
-    }
-
-    if (typeof file.filename === "string" && file.filename.trim()) {
-        const filename = file.filename.trim();
-
-        if (/^https?:\/\//i.test(filename)) {
-            return filename;
-        }
-
-        return normalizeStoredPath(filename);
+        return file.path.trim();
     }
 
     return "";
@@ -249,9 +216,25 @@ router.get("/profile", authMiddleware, async(req, res) => {
     });
 });
 
+const getNumericSortValue = (value) => {
+    // const match = String(value ? ? "").trim().match(/\d+/);
+    const match = String(value || "").trim().match(/\d+/);
+    return match ? Number(match[0]) : Number.MAX_SAFE_INTEGER;
+};
+
 router.get("/students", async(req, res) => {
     try {
-        const students = await User.find({ role: "student" });
+        const students = await User.find({ role: "student" }).lean();
+
+        students.sort((a, b) => {
+            const classDiff = getNumericSortValue(a.studentClass) - getNumericSortValue(b.studentClass);
+            if (classDiff !== 0) return classDiff;
+
+            const rollDiff = getNumericSortValue(a.rollNo) - getNumericSortValue(b.rollNo);
+            if (rollDiff !== 0) return rollDiff;
+
+            return String(a.name || "").localeCompare(String(b.name || ""));
+        });
 
         res.status(200).json(students);
     } catch (error) {
