@@ -37,7 +37,6 @@ const allowedOrigins = [
     "http://127.0.0.1:1234",
     "http://127.0.0.1:5173",
     "https://school-ten-mauve.vercel.app",
-    "https://school-backend-production-59a3.up.railway.app",
     "https://www.sunrisepublicschool.in",
     "https://sunrisepublicschool.in"
 ];
@@ -57,8 +56,19 @@ const corsOptions = {
     origin: function(origin, callback) {
         if (!origin) return callback(null, true);
 
-        if (allowedOrigins.includes(origin) || isLocalOrigin(origin)) {
-            return callback(null, true);
+        try {
+            const { hostname } = new URL(origin);
+
+            // Allow if explicitly listed, local, or matches the frontend domain pattern
+            if (
+                allowedOrigins.includes(origin) ||
+                isLocalOrigin(origin) ||
+                hostname.endsWith("sunrisepublicschool.in")
+            ) {
+                return callback(null, true);
+            }
+        } catch (err) {
+            // If origin is malformed, disallow
         }
 
         return callback(new Error("Not allowed by CORS"));
@@ -71,6 +81,25 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
+
+// Fallback middleware to ensure CORS headers are set when origin matches our rules.
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (!origin) return next();
+
+    try {
+        const { hostname } = new URL(origin);
+        if (allowedOrigins.includes(origin) || isLocalOrigin(origin) || hostname.endsWith("sunrisepublicschool.in")) {
+            res.setHeader("Access-Control-Allow-Origin", origin);
+            res.setHeader("Access-Control-Allow-Credentials", "true");
+            res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, Origin, Accept, X-Requested-With");
+        }
+    } catch (err) {
+        // ignore malformed origin
+    }
+
+    next();
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -546,73 +575,114 @@ app.post("/api/admin/send-otp", async(req, res) => {
 
 
 // 2. Verify OTP and Change Password
+// app.post("/api/admin/verify-otp-reset", async(req, res) => {
+
+//     try {
+
+//         const {
+//             email,
+//             otp,
+//             newPassword
+//         } = req.body;
+//         const normalizedEmail = normalizeEmail(email);
+
+//         const data = otpStore[normalizedEmail];
+
+//         if (!data) {
+
+//             return res.status(400).json({
+//                 message: "OTP not found"
+//             });
+
+//         }
+
+//         if (Date.now() > data.expires) {
+
+//             delete otpStore[normalizedEmail];
+
+//             return res.status(400).json({
+//                 message: "OTP Expired"
+//             });
+
+//         }
+
+//         if (otp !== data.otp) {
+
+//             return res.status(400).json({
+//                 message: "Invalid OTP"
+//             });
+
+//         }
+
+//         const hash = await bcrypt.hash(
+//             newPassword,
+//             10
+//         );
+
+//         await Student.findOneAndUpdate({
+//             role: "admin",
+//             email: normalizedEmail
+//         }, {
+//             password: hash
+//         });
+
+//         delete otpStore[normalizedEmail];
+
+//         res.json({
+//             message: "Password updated successfully"
+//         });
+
+//     } catch (err) {
+
+//         console.log(err);
+
+//         res.status(500).json({
+//             message: "Server Error"
+//         });
+
+//     }
+
+// });
+
 app.post("/api/admin/verify-otp-reset", async(req, res) => {
-
     try {
-
-        const {
-            email,
-            otp,
-            newPassword
-        } = req.body;
+        const { email, otp, newPassword } = req.body;
         const normalizedEmail = normalizeEmail(email);
 
+        // console.log("=== VERIFY OTP HIT ===");
+        // console.log("Frontend se aaya Email:", normalizedEmail);
+        // console.log("Frontend se aaya OTP:", otp, "Type:", typeof otp);
+
         const data = otpStore[normalizedEmail];
+        // console.log("Server ki memory me saved data:", data);
 
         if (!data) {
-
-            return res.status(400).json({
-                message: "OTP not found"
-            });
-
+            return res.status(400).json({ message: "OTP not found in server memory. Please send OTP again." });
         }
 
         if (Date.now() > data.expires) {
-
             delete otpStore[normalizedEmail];
-
-            return res.status(400).json({
-                message: "OTP Expired"
-            });
-
+            return res.status(400).json({ message: "OTP Expired. Please request a new one." });
         }
 
-        if (otp !== data.otp) {
-
-            return res.status(400).json({
-                message: "Invalid OTP"
-            });
-
+        // Loose comparison (!=) use kar rahe hain taaki agar string/number ka issue ho toh solve ho jaye
+        if (otp != data.otp) {
+            return res.status(400).json({ message: "Invalid OTP. Type or values do not match." });
         }
 
-        const hash = await bcrypt.hash(
-            newPassword,
-            10
-        );
+        const hash = await bcrypt.hash(newPassword, 10);
 
-        await Student.findOneAndUpdate({
-            role: "admin",
-            email: normalizedEmail
-        }, {
-            password: hash
-        });
+        await Student.findOneAndUpdate({ role: "admin", email: normalizedEmail }, { password: hash });
 
         delete otpStore[normalizedEmail];
+        // console.log("✅ Password updated successfully!");
 
-        res.json({
-            message: "Password updated successfully"
-        });
+        res.json({ message: "Password updated successfully" });
 
     } catch (err) {
-
-        console.log(err);
-
-        res.status(500).json({
-            message: "Server Error"
-        });
-
+        console.error("Verify OTP Error:", err);
+        res.status(500).json({ message: "Server Error" });
     }
-
 });
 
 // --- ADMIN SIDE: Fetch All Pending Payments ---
@@ -942,6 +1012,13 @@ app.get("/api/student/:id", async(req, res) => {
     }
 });
 
+// Serve React Build
+app.use(express.static(path.join(__dirname, "dist")));
+
+// React Routes
+app.get(/^\/(?!api).*/, (req, res) => {
+    res.sendFile(path.join(__dirname, "dist", "index.html"));
+});
 
 // 404 handler
 app.use((req, res, next) => {
@@ -963,28 +1040,15 @@ if (!mongoUri) {
     process.exit(1);
 }
 
-// mongoose.connect(mongoUri)
-//     .then(() => console.log("DB connected"))
-//     .catch((err) => {
-//         console.error("MongoDB connection failed:", err.message);
-//         process.exit(1);
-//     });
 
-// app.listen(3000, () => {
-//     console.log("Server running 3000");
-// });
 const PORT = process.env.BACKEND_PORT || process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
-// MongoDB connection
-mongoose.connect(process.env.DB_CONNECT_STRING)
+
+mongoose.connect(mongoUri)
     .then(() => {
         console.log("DB connected");
     })
     .catch((err) => {
         console.error("MongoDB connection failed:", err.message);
-        process.exit(1);
     });
 
 app.listen(PORT, () => {
